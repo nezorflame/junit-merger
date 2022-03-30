@@ -3,16 +3,16 @@ package main
 import (
 	"bytes"
 	"encoding/xml"
-	"errors"
 	"flag"
-	"fmt"
 	"io/ioutil"
-	"strconv"
+	"log"
+	"os"
+	"path/filepath"
 )
 
-//todo: directory support
+// TODO: directory support
 
-//JUnitReport represents either a single test suite or a collection of test suites
+// JUnitReport represents either a single test suite or a collection of test suites
 type JUnitReport struct {
 	XMLName   xml.Name
 	XML       string       `xml:",innerxml"`
@@ -23,23 +23,20 @@ type JUnitReport struct {
 	XMLBuffer bytes.Buffer `xml:"-"`
 }
 
-var usage = `Usage: junit-merger [options] [files]
+var outputFileName string
 
-Options:
-  -o  Merged report filename`
+func init() {
+	flag.StringVar(&outputFileName, "o", "", "Merged report filename")
+}
 
 func main() {
-	flag.Usage = func() {
-		fmt.Println(usage)
-	}
-	outputFileName := flag.String("o", "", "merged report filename")
 	flag.Parse()
 	files := flag.Args()
-	printReport := *outputFileName == ""
+	printReport := outputFileName == ""
 
 	if len(files) == 0 {
 		flag.Usage()
-		return
+		os.Exit(1)
 	}
 
 	var mergedReport JUnitReport
@@ -48,24 +45,21 @@ func main() {
 
 	for _, fileName := range files {
 		var report JUnitReport
-		in, err := ioutil.ReadFile(fileName)
-
+		in, err := ioutil.ReadFile(filepath.Clean(fileName))
 		if err != nil {
-			panic(err)
+			log.Fatalf("Unable to read file '%s': %s", fileName, err)
 		}
 
-		err = xml.Unmarshal(in, &report)
-
-		if err != nil {
-			panic(err)
+		if err = xml.Unmarshal(in, &report); err != nil {
+			log.Fatalf("Unable to unmarshal report '%s': %s", fileName, err)
 		}
 
 		if report.XMLName.Local == "testsuite" {
-			panic(errors.New("Reports with a root <testsuite> are not supported"))
+			log.Fatalf("Unable to read report '%s': reports with a root <testsuite> are not supported", fileName)
 		}
 
 		if startedReading && report.Name != mergedReport.Name {
-			panic(errors.New("All reports must have the same <testsuites> name"))
+			log.Fatalf("Unable to read report '%s': all reports must have the same <testsuites> name", fileName)
 		}
 
 		startedReading = true
@@ -82,14 +76,13 @@ func main() {
 	mergedOutput, _ := xml.MarshalIndent(&mergedReport, "", "  ")
 
 	if printReport {
-		fmt.Println(string(mergedOutput))
-	} else {
-		err := ioutil.WriteFile(*outputFileName, mergedOutput, 0644)
-
-		if err != nil {
-			panic(err)
-		}
-
-		fmt.Println("Merged " + strconv.Itoa(fileCount) + " reports to " + *outputFileName)
+		log.Println(string(mergedOutput))
+		return
 	}
+
+	if err := ioutil.WriteFile(outputFileName, mergedOutput, 0o600); err != nil {
+		log.Fatalf("Unable to save reports to the output file '%s': %s", outputFileName, err)
+	}
+
+	log.Printf("Merged %d reports to file '%s'", fileCount, outputFileName)
 }

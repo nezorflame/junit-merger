@@ -1,18 +1,19 @@
 # junit-merger
 
+This is a fork of the original [junit-merger](github.com/imsky/junit-merger) project, updated to support [Go modules](https://go.dev/ref/mod) with the simplified project structure.
+
 `junit-merger` merges many JUnit reports into one report.
 
 ## Usage
 
-```
+```text
 $ junit-merger *.xml > merged.xml
 $ junit-merger -o merged.xml a.xml b.xml c.xml
 ```
 
 ## Installation
 
-* Download binaries from <https://github.com/imsky/junit-merger/releases>
-* `go get github.com/imsky/junit-merger/...`
+`go install github.com/nezorflame/junit-merger@latest`
 
 ## License
 
@@ -21,3 +22,4 @@ $ junit-merger -o merged.xml a.xml b.xml c.xml
 ## Credit
 
 Made by [Ivan Malopinsky](http://imsky.co).
+Modified by [Ilya Danilkin](https://github.com/nezorflame).
